@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الكورسات | مجتمع الفايب كودينج</title><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#0A1730">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="plat.css"></head>
+<body class="plt" data-p="courses"><main id="pg"><div class="sk" style="height:46px;width:240px;margin-bottom:20px"></div><div class="cg"><div class="sk" style="height:220px"></div><div class="sk" style="height:220px"></div><div class="sk" style="height:220px"></div></div></main>
+<script src="config.js"></script><script src="vibe.js"></script><script src="shell.js"></script>
+<script>
+
+const PAL=['#0878C9,#0b2a5c','#7c3aed,#3b1a7a','#06b6d4,#0a4a7a','#16a34a,#14532d','#f59e0b,#78350f','#ef4444,#7f1d1d'];
+run(async()=>{const p=$('#pg'),H=pgHead('كورساتي','كمّل تعلّمك خطوة بخطوة وتابع تقدّمك.');
+ let CS,LS,DONE;
+ try{let pr;[CS,LS,pr]=await Promise.all([vget('aa_vc_courses?select=*&order=sort,id'),vget('aa_vc_lessons?select=id,course_id,title,sort&order=sort,id'),vget('aa_vc_progress?select=lesson_id')]);DONE=new Set(pr.map(x=>x.lesson_id))}
+ catch(e){p.innerHTML=H+'<div class="empty">تعذّر تحميل الكورسات. تأكد إن ملف setup_v20.sql اتشغّل في Supabase.</div>';return}
+ if(!CS.length){p.innerHTML=H+'<div class="empty">لسه مفيش كورسات منشورة. هتظهر هنا أول ما تتضاف.</div>';return}
+ const st=c=>{const ls=LS.filter(l=>l.course_id===c.id),d=ls.filter(l=>DONE.has(l.id)).length;return{ls,n:ls.length,d,pct:ls.length?Math.round(d*100/ls.length):0}};
+ const S=CS.map(c=>({c,...st(c)})),tl=S.reduce((a,x)=>a+x.n,0),td=S.reduce((a,x)=>a+x.d,0);
+ const stats=`<div class="stt"><div class="stc">${ICON.book}<div><b>${nf.format(CS.length)}</b><span>كورس</span></div></div><div class="stc">${ICON.play}<div><b>${nf.format(tl)}</b><span>درس</span></div></div><div class="stc">${ICON.ok}<div><b>${nf.format(td)}</b><span>درس أنجزته</span></div></div><div class="stc">${ICON.pct}<div><b>${nf.format(tl?Math.round(td*100/tl):0)}%</b><span>تقدّمك العام</span></div></div></div>`;
+ const cur=S.find(x=>x.d>0&&x.d<x.n)||(td===0?S.find(x=>x.n):null);
+ let hero='';if(cur){const nx=cur.ls.find(l=>!DONE.has(l.id))||cur.ls[0];
+  hero=`<div class="cont"><div><small>${cur.d?'كمّل من حيث وقفت':'ابدأ رحلتك'}</small><h2>${esc(cur.c.title)}</h2><div class="bar" aria-hidden="true"><i style="width:${cur.pct}%"></i></div><p>${cur.d?'أنجزت '+nf.format(cur.d)+' من '+nf.format(cur.n)+' · الدرس الجاي: '+esc(nx.title):'أول درس: '+esc(nx.title)}</p></div><a class="btn btn-w" href="course?id=${cur.c.id}&l=${nx.id}">${cur.d?'كمّل التعلّم':'ابدأ الكورس'} ←</a></div>`}
+ p.innerHTML=H+stats+hero+'<h2 class="sec-t" style="margin-top:0">كل الكورسات</h2><div class="cg">'+S.map(x=>{const c=x.c,[a,b]=PAL[c.id%6].split(',');
+  return `<a class="cc" href="course?id=${c.id}"><div class="cc-cv" style="background:linear-gradient(135deg,${a},${b})">${safeUrl(c.cover_url)?`<img src="${esc(c.cover_url)}" alt="" loading="lazy">`:'<b>&lt;/&gt;</b>'}<span class="chip">${esc(c.level)}</span></div>
+  <div class="cc-b"><h3>${esc(c.title)}</h3>${c.description?`<p>${esc(c.description)}</p>`:'<p></p>'}<div class="bar" aria-hidden="true"><i style="width:${x.pct}%"></i></div><div class="cc-m"><span>${nf.format(x.n)} درس · ${x.d?'أنجزت '+nf.format(x.d):'لم تبدأ'}</span><b>${nf.format(x.pct)}%</b></div><span class="cc-ct">${x.d?(x.pct===100?'راجع الكورس':'كمّل'):'ابدأ'} ←</span></div></a>`}).join('')+'</div>'});
+
+</script></body></html>

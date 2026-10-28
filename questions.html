@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الأسئلة | مجتمع الفايب كودينج</title><meta name="robots" content="noindex, nofollow"><meta name="theme-color" content="#0A1730">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="plat.css"></head>
+<body class="plt" data-p="questions"><main id="pg"><div class="sk" style="height:46px;width:240px;margin-bottom:20px"></div><div class="cg"><div class="sk" style="height:220px"></div><div class="sk" style="height:220px"></div><div class="sk" style="height:220px"></div></div></main>
+<script src="config.js"></script><script src="vibe.js"></script><script src="shell.js"></script>
+<script>
+run(async()=>{
+let QS=[],ANS={},OPEN=null,F='all';
+async function loadQA(){const p=$('#pg');p.innerHTML=pgHead('الأسئلة','اسأل واتجاوب عليك من المدرّس والأعضاء.')+SK(2,100);
+ try{QS=await vget('aa_vc_questions?select=*&order=id.desc&limit=80');const ids=QS.map(q=>q.id);ANS={};
+  if(ids.length)(await vget('aa_vc_answers?select=*&question_id=in.('+ids.join(',')+')&order=id')).forEach(a=>(ANS[a.question_id]=ANS[a.question_id]||[]).push(a))}
+ catch(_){p.innerHTML=pgHead('الأسئلة')+'<div class="empty">تعذّر تحميل الأسئلة.</div>';return}renderQA()}
+function renderQA(){const p=$('#pg');
+ p.innerHTML=pgHead('الأسئلة','اسأل واتجاوب عليك من المدرّس والأعضاء.')+`<div class="card"><b style="display:block;margin-bottom:8px">اسأل سؤال</b><form class="fm" id="qf"><input id="qt" maxlength="140" placeholder="عنوان السؤال (مثال: البرومبت مش بيطلّع الشكل اللي عايزه)"><textarea id="qb" maxlength="2000" placeholder="اشرح المشكلة بالتفصيل... (اختياري)"></textarea><button class="btn btn-p" style="align-self:flex-start">إرسال السؤال</button></form></div>
+ <div class="fl" id="fl"><button data-f="all" class="on">الكل</button><button data-f="open">لسه مش متحلّة</button><button data-f="solved">تم الحل</button></div><div class="stack" id="ql"></div>`;renderList();$('#fl').onclick=e=>{const b=e.target.closest('[data-f]');if(!b)return;F=b.dataset.f;$$('#fl button').forEach(x=>x.classList.toggle('on',x===b));renderList()};
+ $('#qf').onsubmit=e=>{e.preventDefault();const t=$('#qt').value.trim(),b=$('#qb').value.trim();if(t.length<4)return toast('اكتب عنوان للسؤال (4 أحرف على الأقل)',true);
+  guard(async()=>{const r=await vpost('aa_vc_questions',{title:t,body:b});QS.unshift(r[0]);OPEN=r[0].id;$('#qt').value='';$('#qb').value='';renderList();toast('تم إرسال سؤالك')})};
+ $('#ql').onclick=qClick}
+function renderList(){const L=QS.filter(q=>F==='all'||(F==='solved')===!!q.solved);$('#ql').innerHTML=L.length?L.map(qHTML).join(''):'<div class="empty">'+(QS.length?'مفيش أسئلة في الفلتر ده.':'لسه مفيش أسئلة. اسأل أول سؤال!')+'</div>'}
+function qHTML(q){const as=ANS[q.id]||[],op=OPEN===q.id,mine=q.user_id===ME_ID;
+ return `<article class="card" data-q="${q.id}"><div class="qh" data-tg="${q.id}"><div><h3>${esc(q.title)}</h3><div class="qm">${esc(q.name)} · ${ago(q.created_at)} · ${nf.format(as.length)} رد</div></div>${q.solved?'<span class="chip g">تم الحل</span>':''}</div>
+ ${op?`${q.body?`<div class="qb">${esc(q.body)}</div>`:''}${as.map(a=>`<div class="an ${a.is_staff?'st':''}"><small><b>${esc(a.name)}</b>${a.is_staff?' <span class="chip">المدرّس</span>':''} · ${ago(a.created_at)}${a.user_id===ME_ID||ADM?` · <a href="#" data-da="${a.id}" style="color:#b42318">حذف</a>`:''}</small><p>${esc(a.body)}</p></div>`).join('')}
+ <form class="sf" data-af="${q.id}"><input maxlength="2000" placeholder="اكتب ردك..."><button class="btn btn-p btn-s">رد</button></form>
+ ${mine||ADM?`<div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-o btn-s" data-sv="${q.id}">${q.solved?'إلغاء "تم الحل"':'تم الحل'}</button><button class="btn btn-r btn-s" data-dq="${q.id}">حذف السؤال</button></div>`:''}`:''}</article>`}
+function qClick(e){const t=e.target;let el;
+ if(el=t.closest('[data-da]')){e.preventDefault();return guard(async()=>{await vdel('aa_vc_answers?id=eq.'+el.dataset.da);for(const k in ANS)ANS[k]=ANS[k].filter(a=>a.id!=el.dataset.da);renderList()})}
+ if(el=t.closest('[data-sv]')){const q=QS.find(x=>x.id==el.dataset.sv);return guard(async()=>{await vpatch('aa_vc_questions?id=eq.'+q.id,{solved:!q.solved});q.solved=!q.solved;renderList()})}
+ if(el=t.closest('[data-dq]')){if(!confirm('تحذف السؤال؟'))return;return guard(async()=>{await vdel('aa_vc_questions?id=eq.'+el.dataset.dq);QS=QS.filter(x=>x.id!=el.dataset.dq);renderList()})}
+ if(t.closest('.sf'))return;
+ if(el=t.closest('[data-tg]')){OPEN=OPEN===+el.dataset.tg?null:+el.dataset.tg;renderList()}}
+document.addEventListener('submit',e=>{const f=e.target.closest('[data-af]');if(!f)return;e.preventDefault();const i=f.querySelector('input'),b=i.value.trim(),qid=+f.dataset.af;if(!b)return;
+ guard(async()=>{const r=await vpost('aa_vc_answers',{question_id:qid,body:b});(ANS[qid]=ANS[qid]||[]).push(r[0]);renderList()})});
+
+
+await loadQA()});
+</script></body></html>

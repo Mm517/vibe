@@ -15,5 +15,5 @@ const TURNSTILE_SITEKEY = "";
    const ICE_SERVERS = [{urls:"stun:stun.l.google.com:19302"},{urls:"turn:YOUR_HOST:443?transport=tcp",username:"USER",credential:"PASS"}]; */
 const ICE_SERVERS = null;
 
-/* موقع الكورس (صفحة التسجيل والدخول) اللي المستخدم بيرجعله لو مفيش جلسة أو بعد الخروج */
-const MAIN_VIBE = "https://mm517.github.io/platform/vibe";
+/* الصفحة التعريفية للكورس: المستخدم بيروحلها بعد الخروج */
+const MAIN_VIBE = "https://academyya.vercel.app/vibe";

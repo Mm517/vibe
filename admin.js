@@ -1,0 +1,73 @@
+/* صفحات الإدارة (كل قسم ليه صفحة): بتتحمّل بس لما الأدمن يفتحها */
+let AS='courses';
+const ASEC=[['courses','الكورسات'],['lessons','الدروس'],['lives','اللايفات'],['members','الأعضاء'],['teachers','المدرسين'],['chat','الشات']];
+function admRun(s){AS=s;$('#pg').innerHTML=pgHead('لوحة الإدارة','تحكّم كامل في الكورسات والدروس واللايفات والأعضاء.')+`<nav class="apill">${ASEC.map(([k,t])=>`<a href="admin-${k}" class="${k===s?'on':''}">${t}</a>`).join('')}</nav><div id="ab"></div>`;adm()}
+const tl=v=>{const d=new Date(v);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
+async function adm(){const b=$('#ab');b.innerHTML=SK(1,120);
+ try{if(AS==='courses'){const cs=await vget('aa_vc_courses?select=*&order=sort,id');
+   b.innerHTML=`<div class="ad-g"><div class="card"><b>الكورسات (${cs.length})</b>${cs.map(c=>`<div class="ad-r"><div><b>${esc(c.title)}</b><br><span class="chip ${c.published?'g':'y'}">${c.published?'منشور':'مخفي'}</span> <span class="chip">ترتيب ${c.sort}</span></div><div class="x"><button class="btn btn-o btn-s" data-pub="${c.id}" data-v="${c.published}">${c.published?'إخفاء':'نشر'}</button><button class="btn btn-o btn-s" data-ec="${c.id}">تعديل</button><button class="btn btn-r btn-s" data-dc="${c.id}">حذف</button></div></div>`).join('')||'<p class="muted">لسه مفيش كورسات.</p>'}</div>
+   <div class="card"><b id="cft">إضافة كورس</b><form class="fm" id="cf" style="margin-top:8px"><input type="hidden" id="cid"><input id="ctt" maxlength="120" placeholder="اسم الكورس" required><textarea id="cd" placeholder="وصف مختصر"></textarea><input id="cc" dir="ltr" placeholder="رابط صورة الغلاف (اختياري)"><div class="r2"><input id="cl" placeholder="المستوى (مبتدئ / متوسط / متقدم)" value="مبتدئ"><input id="cs" type="number" placeholder="الترتيب" value="0"></div><button class="btn btn-p">حفظ</button></form></div></div>`;
+   window._cs=cs;$('#cf').onsubmit=e=>{e.preventDefault();const o={title:$('#ctt').value.trim(),description:$('#cd').value.trim(),cover_url:$('#cc').value.trim(),level:$('#cl').value.trim()||'مبتدئ',sort:+$('#cs').value||0},id=$('#cid').value;
+    guard(async()=>{id?await vpatch('aa_vc_courses?id=eq.'+id,o):await vpost('aa_vc_courses',o,'return=minimal');toast('تم الحفظ');adm()})}}
+  else if(AS==='lessons'){const cs=await vget('aa_vc_courses?select=id,title&order=sort,id');const cid=+(window._lc||(cs[0]&&cs[0].id)||0);window._lc=cid;const ls=cid?await vget('aa_vc_lessons?select=*&course_id=eq.'+cid+'&order=sort,id'):[];
+   b.innerHTML=`<div class="card" style="margin-bottom:12px"><select class="fm" id="lcs" style="padding:10px;border:1px solid var(--bo);border-radius:10px;width:100%">${cs.map(c=>`<option value="${c.id}" ${c.id===cid?'selected':''}>${esc(c.title)}</option>`).join('')}</select></div>
+   ${cid?`<div class="ad-g"><div class="card"><b>دروس الكورس (${ls.length})</b>${ls.map(l=>`<div class="ad-r"><div><b>${esc(l.title)}</b><br><span class="chip">ترتيب ${l.sort}</span></div><div class="x"><button class="btn btn-o btn-s" data-el="${l.id}">تعديل</button><button class="btn btn-r btn-s" data-dl="${l.id}">حذف</button></div></div>`).join('')||'<p class="muted">مفيش دروس.</p>'}</div>
+   <div class="card"><b>إضافة / تعديل درس</b><form class="fm" id="lf" style="margin-top:8px"><input type="hidden" id="lid"><input id="lt" maxlength="140" placeholder="عنوان الدرس" required><input id="lv" dir="ltr" placeholder="رابط الفيديو (يوتيوب أو mp4)"><textarea id="ln" placeholder="ملاحظات / ملخص الدرس / روابط"></textarea><input id="ls" type="number" placeholder="الترتيب" value="${ls.length+1}"><button class="btn btn-p">حفظ الدرس</button></form></div></div>`:'<div class="empty">أضف كورس الأول.</div>'}`;
+   window._ls=ls;$('#lcs').onchange=e=>{window._lc=+e.target.value;adm()};
+   const f=$('#lf');if(f)f.onsubmit=e=>{e.preventDefault();const o={title:$('#lt').value.trim(),video_url:$('#lv').value.trim(),notes:$('#ln').value.trim(),sort:+$('#ls').value||0},id=$('#lid').value;
+    guard(async()=>{id?await vpatch('aa_vc_lessons?id=eq.'+id,o):await vpost('aa_vc_lessons',{...o,course_id:cid},'return=minimal');toast('تم الحفظ');adm()})}}
+  else if(AS==='lives'){const ls=await vget('aa_vc_lives?select=*&order=starts_at.desc&limit=60');window._lv=ls;
+   b.innerHTML=`<div class="ad-g"><div class="card"><b>اللايفات (${ls.length})</b>${ls.map(l=>`<div class="ad-r"><div><b>${esc(l.title)}</b><br><span class="muted" style="font-size:13px">${fdt(l.starts_at)}</span></div><div class="x"><select data-st="${l.id}" style="padding:5px;border-radius:8px;border:1px solid var(--bo)">${[['upcoming','قادم'],['live','مباشر الآن'],['ended','انتهى']].map(([v,t])=>`<option value="${v}" ${l.status===v?'selected':''}>${t}</option>`).join('')}</select><button class="btn btn-o btn-s" data-elv="${l.id}">تعديل</button><button class="btn btn-r btn-s" data-dlv="${l.id}">حذف</button></div></div>`).join('')||'<p class="muted">لسه مفيش لايفات.</p>'}</div>
+   <div class="card"><b>إضافة / تعديل لايف</b><form class="fm" id="vf" style="margin-top:8px"><input type="hidden" id="vid"><input id="vt" maxlength="140" placeholder="عنوان اللايف" required><textarea id="vd" placeholder="وصف مختصر"></textarea><input id="vs" type="datetime-local" required><input id="vu" dir="ltr" placeholder="رابط اللايف (يوتيوب)"><input id="vr" dir="ltr" placeholder="رابط التسجيل بعد الانتهاء (اختياري)"><button class="btn btn-p">حفظ اللايف</button></form></div></div>`;
+   $('#vf').onsubmit=e=>{e.preventDefault();const o={title:$('#vt').value.trim(),description:$('#vd').value.trim(),starts_at:new Date($('#vs').value).toISOString(),url:$('#vu').value.trim(),replay_url:$('#vr').value.trim()},id=$('#vid').value;
+    guard(async()=>{id?await vpatch('aa_vc_lives?id=eq.'+id,o):await vpost('aa_vc_lives',o,'return=minimal');toast('تم الحفظ');adm()})}}
+  else if(AS==='members'){const ms=await vget('aa_vc_members?select=*&order=created_at.desc&limit=300');
+   b.innerHTML=`<div class="card"><b>الأعضاء (${nf.format(ms.length)})</b>${ms.map(m=>`<div class="ad-r"><div><b>${esc(m.name)}</b> ${m.banned?'<span class="chip r">محظور</span>':''}<br><span class="muted" style="font-size:12.5px">انضم ${ago(m.created_at)}</span></div>${m.user_id===ME_ID?'':`<div class="x"><button class="btn ${m.banned?'btn-o':'btn-r'} btn-s" data-bn="${m.user_id}" data-v="${m.banned}">${m.banned?'فك الحظر':'حظر'}</button></div>`}</div>`).join('')}</div>`}
+  else if(AS==='teachers')await admTeachers(b);
+  else if(AS==='chat'){const st=await vget('aa_vc_settings?select=chat_locked');const lk=!!(st[0]&&st[0].chat_locked);
+   b.innerHTML=`<div class="card ad-r"><div><b>قفل الشات</b><br><span class="muted" style="font-size:13px">لما يتقفل الأعضاء مبيقدروش يكتبوا (إنت بس).</span></div><button class="btn ${lk?'btn-p':'btn-o'}" data-lk="${lk}">${lk?'فتح الشات':'قفل الشات'}</button></div>
+   <div class="card" style="margin-top:12px"><b>مسح الشات بالكامل</b><p class="muted" style="font-size:13px;margin:4px 0 10px">بيحذف كل الرسائل نهائيًا.</p><button class="btn btn-r" data-clr="1">مسح كل الرسائل</button></div>`}}
+ catch(e){b.innerHTML='<div class="empty">تعذّر التحميل: '+esc(e.message)+'</div>'}}
+/* أحداث الإدارة (تفويض واحد) */
+document.addEventListener('click',e=>{const t=e.target;let el;
+ if(el=t.closest('[data-pub]'))return guard(async()=>{await vpatch('aa_vc_courses?id=eq.'+el.dataset.pub,{published:el.dataset.v!=='true'});adm()});
+ if(el=t.closest('[data-dc]')){if(!confirm('تحذف الكورس وكل دروسه؟'))return;return guard(async()=>{await vdel('aa_vc_courses?id=eq.'+el.dataset.dc);adm()})}
+ if(el=t.closest('[data-ec]')){const c=window._cs.find(x=>x.id==el.dataset.ec);$('#cid').value=c.id;$('#ctt').value=c.title;$('#cd').value=c.description;$('#cc').value=c.cover_url;$('#cl').value=c.level;$('#cs').value=c.sort;$('#cft').textContent='تعديل: '+c.title;$('#ctt').focus();return}
+ if(el=t.closest('[data-dl]')){if(!confirm('تحذف الدرس؟'))return;return guard(async()=>{await vdel('aa_vc_lessons?id=eq.'+el.dataset.dl);adm()})}
+ if(el=t.closest('[data-el]')){const l=window._ls.find(x=>x.id==el.dataset.el);$('#lid').value=l.id;$('#lt').value=l.title;$('#lv').value=l.video_url;$('#ln').value=l.notes;$('#ls').value=l.sort;$('#lt').focus();return}
+ if(el=t.closest('[data-dlv]')){if(!confirm('تحذف اللايف؟'))return;return guard(async()=>{await vdel('aa_vc_lives?id=eq.'+el.dataset.dlv);adm()})}
+ if(el=t.closest('[data-elv]')){const l=window._lv.find(x=>x.id==el.dataset.elv);$('#vid').value=l.id;$('#vt').value=l.title;$('#vd').value=l.description;$('#vs').value=tl(l.starts_at);$('#vu').value=l.url;$('#vr').value=l.replay_url;$('#vt').focus();return}
+ if(el=t.closest('[data-bn]'))return guard(async()=>{await vpatch('aa_vc_members?user_id=eq.'+el.dataset.bn,{banned:el.dataset.v!=='true'});toast('تم');adm()});
+ if(el=t.closest('[data-lk]'))return guard(async()=>{await vpatch('aa_vc_settings?id=eq.1',{chat_locked:el.dataset.lk!=='true'});toast('تم');adm()});
+ if(el=t.closest('[data-clr]')){if(!confirm('تمسح كل رسائل الشات؟'))return;return guard(async()=>{await vdel('aa_vc_msgs?id=gt.0');toast('تم المسح')})}});
+document.addEventListener('change',e=>{const s=e.target.closest('[data-st]');if(!s)return;guard(async()=>{await vpatch('aa_vc_lives?id=eq.'+s.dataset.st,{status:s.value});toast('تم التحديث')})});
+
+
+
+/* ===== قسم المدرسين: إضافة مدرسين + خطة النظام / الـ APIs / الأدوار / جدول الشرح ===== */
+const KL={stage:'مراحل النظام',api:'الـ APIs',role:'أدوار المدرسين',session:'جدول الشرح'};
+window._tk=window._tk||'session';
+async function admTeachers(b){
+ const [ts,its,ms]=await Promise.all([vget('aa_vc_teachers?select=*&order=created_at'),vget('aa_vc_teach_items?select=*&order=sort,id'),vget('aa_vc_members?select=user_id,name&banned=eq.false&order=name&limit=300')]);
+ window._ts=ts;window._its=its;
+ const k=window._tk,L=its.filter(i=>i.kind===k),tn=Object.fromEntries(ts.map(t=>[t.user_id,t.name])),free=ms.filter(m=>!ts.some(t=>t.user_id===m.user_id)),sess=k==='session',tch=k==='role'||sess,lnk=k==='api'||k==='stage';
+ b.innerHTML=`<div class="card" style="margin-bottom:14px"><b>المدرسين (${ts.length})</b><p class="muted" style="font-size:13px;margin:2px 0 6px">المدرّس (غير الأدمن) بيشوف صفحة المدرسين: النظام والـ APIs والأدوار والمواعيد + المساعد الذكي + شات المدرسين. لازم يكون سجّل حساب في الموقع الأول.</p>
+  ${ts.map(t=>`<div class="ad-r"><div><b>${esc(t.name)}</b> ${t.active?'':'<span class="chip y">موقوف</span>'}<br><span class="muted" style="font-size:12.5px">${esc(t.title||'بدون مسمّى')}</span></div><div class="x"><button class="btn btn-o btn-s" data-tact="${t.user_id}" data-v="${t.active}">${t.active?'إيقاف':'تفعيل'}</button><button class="btn btn-r btn-s" data-tdel="${t.user_id}">إزالة</button></div></div>`).join('')||'<p class="muted">لسه مفيش مدرسين.</p>'}
+  <form class="fm" id="tfa" style="margin-top:12px"><div class="r2"><select id="tfm" required><option value="">اختار عضو...</option>${free.map(m=>`<option value="${m.user_id}">${esc(m.name)}</option>`).join('')}</select><input id="tft" maxlength="60" placeholder="المسمّى (مثال: مدرّس الـ Backend)"></div><button class="btn btn-p" style="align-self:flex-start">إضافة مدرّس</button></form></div>
+ <div class="fl" id="tkl" style="margin-top:0">${Object.entries(KL).map(([x,t])=>`<button data-tk="${x}" class="${x===k?'on':''}">${t}</button>`).join('')}</div>
+ <div class="ad-g"><div class="card"><b>${KL[k]} (${L.length})</b>${L.map(i=>`<div class="ad-r"><div><b>${esc(i.title)}</b>${i.teacher_id?` <span class="chip">${esc(tn[i.teacher_id]||'')}</span>`:''}<br><span class="muted" style="font-size:12.5px">${i.starts_at?fdt(i.starts_at)+' · '+(i.duration_min||'؟')+' دقيقة':esc((i.body||'').slice(0,70))}</span></div><div class="x"><button class="btn btn-o btn-s" data-iedit="${i.id}">تعديل</button><button class="btn btn-r btn-s" data-idel="${i.id}">حذف</button></div></div>`).join('')||'<p class="muted">فاضي.</p>'}</div>
+ <div class="card"><b id="ift">إضافة إلى: ${KL[k]}</b><form class="fm" id="itf" style="margin-top:8px"><input type="hidden" id="iid"><input id="ii" maxlength="160" placeholder="العنوان" required><textarea id="ib" maxlength="2000" placeholder="${k==='role'?'وصف الدور والمسؤوليات':sess?'تفاصيل الشرح (اختياري)':'الوصف / الدور'}"></textarea>
+  ${lnk?'<input id="il" dir="ltr" maxlength="200" placeholder="الرابط / الـ endpoint (اختياري)">':''}
+  ${tch?`<select id="it"><option value="">— مدرّس —</option>${ts.map(t=>`<option value="${t.user_id}">${esc(t.name)}</option>`).join('')}</select>`:''}
+  ${sess?'<div class="r2"><input id="is" type="datetime-local" required><input id="id" type="number" min="1" max="600" placeholder="المدة بالدقايق" required></div>':''}
+  <input id="io" type="number" placeholder="الترتيب" value="${L.length+1}"><button class="btn btn-p">حفظ</button></form></div></div>`;
+ $('#tfa').onsubmit=e=>{e.preventDefault();const m=free.find(x=>x.user_id===$('#tfm').value);if(!m)return;guard(async()=>{await vpost('aa_vc_teachers',{user_id:m.user_id,name:m.name,title:$('#tft').value.trim()},'return=minimal');toast('تمت الإضافة');adm()})};
+ $('#itf').onsubmit=e=>{e.preventDefault();const o={title:$('#ii').value.trim(),body:$('#ib').value.trim(),sort:+$('#io').value||0,link:lnk?$('#il').value.trim():'',teacher_id:tch&&$('#it').value?$('#it').value:null,starts_at:sess?new Date($('#is').value).toISOString():null,duration_min:sess?+$('#id').value||null:null},id=$('#iid').value;
+  guard(async()=>{id?await vpatch('aa_vc_teach_items?id=eq.'+id,o):await vpost('aa_vc_teach_items',{...o,kind:k},'return=minimal');toast('تم الحفظ');adm()})}}
+document.addEventListener('click',e=>{const t=e.target;let el;
+ if(el=t.closest('[data-tk]')){window._tk=el.dataset.tk;return adm()}
+ if(el=t.closest('[data-tact]'))return guard(async()=>{await vpatch('aa_vc_teachers?user_id=eq.'+el.dataset.tact,{active:el.dataset.v!=='true'});adm()});
+ if(el=t.closest('[data-tdel]')){if(!confirm('تشيل المدرّس؟ (حسابه هيفضل عضو عادي)'))return;return guard(async()=>{await vdel('aa_vc_teachers?user_id=eq.'+el.dataset.tdel);adm()})}
+ if(el=t.closest('[data-idel]')){if(!confirm('تحذف العنصر؟'))return;return guard(async()=>{await vdel('aa_vc_teach_items?id=eq.'+el.dataset.idel);adm()})}
+ if(el=t.closest('[data-iedit]')){const i=window._its.find(x=>x.id==el.dataset.iedit);if(!i)return;$('#iid').value=i.id;$('#ii').value=i.title;$('#ib').value=i.body;$('#io').value=i.sort;
+  if($('#il'))$('#il').value=i.link;if($('#it'))$('#it').value=i.teacher_id||'';if($('#is')&&i.starts_at)$('#is').value=tl(i.starts_at);if($('#id'))$('#id').value=i.duration_min||'';$('#ift').textContent='تعديل: '+i.title;$('#ii').focus()}});
