@@ -17,3 +17,6 @@ const ICE_SERVERS = null;
 
 /* الصفحة التعريفية للكورس: المستخدم بيروحلها بعد الخروج */
 const MAIN_VIBE = "https://academyya.vercel.app/vibe";
+
+/* الاجتماعات داخل الموقع (Jitsi). السيرفر العام meet.jit.si بيحدّد وقت التضمين؛ للحصص الطويلة حط هنا سيرفر Jitsi بتاعك أو 8x8.vc، أو استخدم "بث برابط خارجي" */
+const JITSI_DOMAIN = "meet.jit.si";

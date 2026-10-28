@@ -32,11 +32,18 @@ const fdt=d=>new Date(d).toLocaleString('ar-EG',{weekday:'long',day:'numeric',mo
 /* يوتيوب → رابط تضمين. لو الرابط مش يوتيوب بيرجع null */
 function ytId(u){try{const x=new URL(u);if(x.hostname.includes('youtu.be'))return x.pathname.slice(1).split('/')[0]||null;
  if(x.hostname.includes('youtube.com')){if(x.pathname==='/watch')return x.searchParams.get('v');const m=x.pathname.match(/^\/(embed|live|shorts)\/([\w-]{6,})/);return m?m[2]:null}}catch(_){}return null}
+/* يقبل لينك أو كود iframe كامل ويرجّع رابط صالح */
+function embedSrc(raw){let s=String(raw||'').trim();const m=s.match(/<iframe[^>]*?\ssrc\s*=\s*["']([^"']+)["']/i);if(m)s=m[1].replace(/&amp;/g,'&');
+ if(s.startsWith('//'))s='https:'+s;return /^https?:\/\/[^\s<>"']+$/i.test(s)?s:''}
+function toEmbed(u){try{const x=new URL(u),h=x.hostname.replace(/^www\./,''),id=ytId(u);
+ if(id)return 'https://www.youtube-nocookie.com/embed/'+encodeURIComponent(id)+'?rel=0';
+ let d;if(h==='drive.google.com'&&(d=x.pathname.match(/\/file\/d\/([^/]+)/)))return 'https://drive.google.com/file/d/'+d[1]+'/preview';
+ if(h==='vimeo.com'&&(d=x.pathname.match(/^\/(\d+)/)))return 'https://player.vimeo.com/video/'+d[1];
+ if(h==='loom.com')return 'https://www.loom.com'+x.pathname.replace('/share/','/embed/')}catch(_){}return u}
 function playerHTML(url){if(!url)return '<div class="np">لا يوجد فيديو لهذا الدرس</div>';
- const id=ytId(url);if(id)return `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}?rel=0" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture;fullscreen" allowfullscreen loading="lazy" title="الفيديو"></iframe>`;
- if(/\.(mp4|webm|ogg)(\?|$)/i.test(url))return `<video src="${esc(url)}" controls playsinline preload="metadata"></video>`;
- if(/^https?:\/\//i.test(url))return `<div class="np"><div><p style="margin-bottom:12px">الفيديو على موقع خارجي</p><a class="btn btn-p" href="${esc(url)}" target="_blank" rel="noopener noreferrer">افتح الفيديو</a></div></div>`;
- return '<div class="np">رابط الفيديو غير صالح</div>'}
+ const s=embedSrc(url);if(!s)return '<div class="np">رابط الفيديو غير صالح</div>';
+ if(/\.(mp4|webm|ogg)(\?|$)/i.test(s))return `<video src="${esc(s)}" controls playsinline preload="metadata"></video>`;
+ return `<iframe src="${esc(toEmbed(s))}" allow="accelerometer;autoplay;clipboard-write;encrypted-media;picture-in-picture;fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" loading="lazy" title="الفيديو"></iframe>`}
 const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
 
 /* ===== المصادقة (إيميل + باسوورد) + كابتشا Turnstile لو متفعّلة في config.js ===== */
@@ -57,3 +64,18 @@ async function ensureMember(j,name){
  const m=await fetch(SUPA_URL+'/rest/v1/aa_vc_members?select=name,banned&user_id=eq.'+j.user.id,{headers:h}).then(x=>x.ok?x.json():[]);
  if(m[0]&&m[0].banned)throw{error_code:'banned'};
  return m[0]?m[0].name:name}
+
+/* اجتماع داخل الموقع (Jitsi) */
+const rid=()=>crypto.randomUUID().replace(/-/g,'').slice(0,16);
+function jitsiJoin(el,l){el.innerHTML='<div class="np">جارٍ فتح الاجتماع…</div>';
+ const go=()=>{el.innerHTML='';new JitsiMeetExternalAPI(JITSI_DOMAIN,{roomName:'vibe-'+l.room,parent:el,width:'100%',height:'100%',lang:'ar',userInfo:{displayName:(ME&&ME.name)||'عضو'},configOverwrite:{prejoinConfig:{enabled:false},disableDeepLinking:true,startWithAudioMuted:!ADM,startWithVideoMuted:!ADM,subject:l.title}})};
+ if(window.JitsiMeetExternalAPI)return go();
+ const s=document.createElement('script');s.src='https://'+JITSI_DOMAIN+'/external_api.js';s.onload=go;s.onerror=()=>{el.innerHTML='<div class="np">تعذّر تحميل الاجتماع</div>'};document.head.appendChild(s)}
+/* امتحان نصي: س: السؤال / - خيار / - الصح * / شرح: ... */
+function parseQuiz(t){const out=[];let c=null;
+ for(const raw of String(t||'').split('\n')){const l=raw.trim();if(!l)continue;
+  if(/^(س|Q)\s*[:：]/i.test(l)){c={q:l.replace(/^(س|Q)\s*[:：]\s*/i,''),o:[],a:-1,e:''};out.push(c)}
+  else if(c&&/^[-•]/.test(l)){let o=l.replace(/^[-•]\s*/,'');if(/\*\s*$/.test(o)){c.a=c.o.length;o=o.replace(/\s*\*\s*$/,'')}c.o.push(o)}
+  else if(c&&/^(شرح|E)\s*[:：]/i.test(l))c.e=l.replace(/^(شرح|E)\s*[:：]\s*/i,'')}
+ return out.filter(x=>x.q&&x.o.length>1&&x.a>=0)}
+const quizText=q=>(q||[]).map(x=>'س: '+x.q+'\n'+x.o.map((o,i)=>'- '+o+(i===x.a?' *':'')).join('\n')+(x.e?'\nشرح: '+x.e:'')).join('\n\n');

@@ -23,14 +23,24 @@ run(async()=>{const p=$('#pg'),Q=new URLSearchParams(location.search),id=+Q.get(
  const dnb=()=>DONE.has(cur.id)?'✓ تم — إلغاء':'تم إنهاء الدرس';
  const meta=()=>{$('#cpct').textContent=nf.format(pct())+'% مكتمل';$('#cbar').style.width=pct()+'%';$('#lsl').innerHTML=list();const d=$('#dn');if(d){d.textContent=dnb();d.className='btn btn-s '+(DONE.has(cur.id)?'btn-o':'btn-p')}};
  const head=`<div class="crumb"><a href="courses">الكورسات</a> › ${esc(c.title)}</div><div class="ph" style="margin-bottom:16px"><div><h1 style="font-size:24px">${esc(c.title)}</h1>${c.description?`<p>${esc(c.description)}</p>`:''}</div><div style="min-width:200px"><span class="chip g" id="cpct"></span><div class="bar" style="margin-top:8px"><i id="cbar" style="width:0"></i></div></div></div>`;
+addEventListener('message',e=>{const f=$('#smf');if(f&&e.source===f.contentWindow&&e.data&&e.data.sm)f.style.height=(e.data.sm+24)+'px'});
+ function quiz(){const q=cur.quiz||[],h=$('#qz');if(!h)return;
+  h.innerHTML=q.map((x,i)=>`<div class="qq"><b>${nf.format(i+1)}. ${esc(x.q)}</b>${x.o.map((o,j)=>`<label><input type="radio" name="q${i}" value="${j}"> ${esc(o)}</label>`).join('')}<div class="ex" id="ex${i}"></div></div>`).join('')+'<button class="btn btn-p" id="qgo">صحّح الإجابات</button><div id="qr"></div>';
+  $('#qgo').onclick=()=>{const a=q.map((_,i)=>{const v=document.querySelector('input[name=q'+i+']:checked');return v?+v.value:null});
+   guard(async()=>{$('#qgo').disabled=true;const r=await vrpc('vc_submit_quiz',{p_lesson:cur.id,p_answers:a});
+    r.review.forEach((x,i)=>{const e=$('#ex'+i);e.className='ex '+(x.ok?'ok':'no');e.textContent=(x.ok?'✓ إجابة صحيحة':'✗ الصحيح: '+q[i].o[x.a])+(x.e?' — '+x.e:'')});
+    $('#qr').innerHTML='<div class="chip g" style="margin-top:12px">النتيجة: '+nf.format(r.score)+' من '+nf.format(r.total)+' (اتسجّلت)</div>'}).then(()=>{const b=$('#qgo');if(b)b.disabled=false})}}
  function draw(){if(!cur){p.innerHTML=head+'<div class="empty">لسه مفيش دروس في الكورس ده.</div>';meta();return}
   const i=ls.findIndex(l=>l.id===cur.id),pv=ls[i-1],nx=ls[i+1];
   p.innerHTML=head+`<div class="cv"><div><div class="pl">${playerHTML(cur.video_url)}</div>
    <div class="card" style="margin-top:14px"><div class="lh"><h2>${esc(cur.title)}</h2><button class="btn btn-s" id="dn"></button></div>
    <div class="lnav">${pv?`<button class="btn btn-o btn-s" data-l="${pv.id}">→ الدرس السابق</button>`:''}${nx?`<button class="btn btn-o btn-s" data-l="${nx.id}">الدرس التالي ←</button>`:''}</div>
-   ${cur.notes?`<div class="nt">${esc(cur.notes)}</div>`:''}</div></div>
+   ${safeUrl(embedSrc(cur.video_url))?`<p class="muted" style="font-size:13px;margin-top:10px">الفيديو مش بيشتغل؟ <a href="${esc(embedSrc(cur.video_url))}" target="_blank" rel="noopener noreferrer" style="color:var(--bl);font-weight:700">افتحه في تبويب جديد</a></p>`:''}
+   ${cur.notes?`<div class="nt">${esc(cur.notes)}</div>`:''}
+   ${cur.summary_html?`<h3 class="sec-t">ملخص الدرس</h3><iframe class="sm" id="smf" sandbox="allow-scripts allow-popups" srcdoc="${esc('<meta charset=utf-8><base target=_blank>'+cur.summary_html+'<script>addEventListener("load",()=>parent.postMessage({sm:document.documentElement.scrollHeight},"*"))<\/script>')}"></iframe>`:''}
+   ${(cur.quiz||[]).length?`<h3 class="sec-t">امتحان على الدرس</h3><div id="qz"></div>`:''}</div></div>
    <aside class="card pc"><div class="pc-h"><b>محتوى الكورس</b><span class="cc-m">${nf.format(ls.length)} درس</span></div><div class="ls" id="lsl"></div></aside></div>`;
-  meta();$('#dn').onclick=toggle}
+  meta();$('#dn').onclick=toggle;quiz()}
  function go(lid){cur=ls.find(l=>l.id===lid)||cur;try{history.replaceState(null,'','course?id='+id+'&l='+cur.id)}catch(_){}draw();window.scrollTo({top:0,behavior:'smooth'})}
  function toggle(){const d=$('#dn');guard(async()=>{d.disabled=true;
   if(DONE.has(cur.id)){await vdel('aa_vc_progress?lesson_id=eq.'+cur.id+'&user_id=eq.'+ME_ID);DONE.delete(cur.id);meta()}
